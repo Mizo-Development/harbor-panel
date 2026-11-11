@@ -1,6 +1,6 @@
 # Harbor API
 
-Base URL for this deployment: `https://panel.example.com/api/v1`.
+Use your own panel hostname. The examples use this base URL: `https://panel.example.com/api/v1`.
 
 Interactive reference and OpenAPI schema: [API documentation](https://panel.example.com/api/docs) and [OpenAPI JSON](https://panel.example.com/api/docs-json). Supported operations declare `apiKey` bearer authentication and `x-harbor-scopes` metadata. API requests use the same pricing, ownership, payment and provisioning rules as the dashboard.
 

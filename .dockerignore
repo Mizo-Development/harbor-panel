@@ -15,7 +15,11 @@ backups
 data/tickets/
 data/branding/
 
-data
+/data/
 infra/caddy.d/*
 docs/screenshots
 .github
+
+# This is source code, not the deployment runtime data directory.
+!apps/web/components/data/
+!apps/web/components/data/**

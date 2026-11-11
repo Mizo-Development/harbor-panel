@@ -21,7 +21,7 @@ data/tickets/
 data/branding/
 
 # Self-hosted runtime state and local credentials
-data/
+/data/
 infra/caddy.d/*
 !infra/caddy.d/.gitkeep
 *.pem
