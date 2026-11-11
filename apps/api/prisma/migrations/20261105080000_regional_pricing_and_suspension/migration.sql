@@ -1,0 +1,10 @@
+ALTER TABLE "User" ADD COLUMN "suspendedAt" TIMESTAMP(3), ADD COLUMN "suspensionReason" TEXT;
+ALTER TABLE "Setting" ADD COLUMN "regionalPricingEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Product" ALTER COLUMN "connectionId" DROP NOT NULL;
+ALTER TABLE "Service" ADD COLUMN "recurringAmount" INTEGER, ADD COLUMN "recurringCurrency" TEXT;
+UPDATE "Service" s SET "recurringAmount"=i.amount,"recurringCurrency"=i.currency FROM (SELECT DISTINCT ON ("serviceId") "serviceId",amount,currency FROM "Invoice" ORDER BY "serviceId","createdAt" ASC) i WHERE s.id=i."serviceId";
+ALTER TABLE "Wallet" DROP CONSTRAINT "Wallet_userId_key";
+CREATE UNIQUE INDEX "Wallet_userId_currency_key" ON "Wallet"("userId","currency");
+CREATE TABLE "PricingRegion" (id TEXT NOT NULL PRIMARY KEY,name TEXT NOT NULL,country TEXT NOT NULL UNIQUE,currency TEXT NOT NULL,active BOOLEAN NOT NULL DEFAULT true);
+CREATE TABLE "RegionalPrice" (id TEXT NOT NULL PRIMARY KEY,"productId" TEXT NOT NULL REFERENCES "Product"(id) ON DELETE CASCADE,"regionId" TEXT NOT NULL REFERENCES "PricingRegion"(id) ON DELETE CASCADE,amount INTEGER NOT NULL CHECK(amount>0));
+CREATE UNIQUE INDEX "RegionalPrice_productId_regionId_key" ON "RegionalPrice"("productId","regionId");

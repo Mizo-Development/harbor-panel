@@ -1,0 +1,7 @@
+CREATE TABLE "SupportDepartment" (id TEXT NOT NULL PRIMARY KEY,name TEXT NOT NULL,active BOOLEAN NOT NULL DEFAULT true,"notificationEmail" TEXT NOT NULL DEFAULT '');
+CREATE TABLE "SupportTicket" (id TEXT NOT NULL PRIMARY KEY,"customerId" TEXT NOT NULL REFERENCES "User"(id),"assignedToId" TEXT REFERENCES "User"(id),"departmentId" TEXT REFERENCES "SupportDepartment"(id),"serviceId" TEXT REFERENCES "Service"(id),subject TEXT NOT NULL,priority TEXT NOT NULL DEFAULT 'NORMAL',status TEXT NOT NULL DEFAULT 'OPEN',"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL,"closedAt" TIMESTAMP(3));
+CREATE INDEX "SupportTicket_customerId_updatedAt_idx" ON "SupportTicket"("customerId","updatedAt");
+CREATE INDEX "SupportTicket_status_updatedAt_idx" ON "SupportTicket"(status,"updatedAt");
+CREATE TABLE "TicketMessage" (id TEXT NOT NULL PRIMARY KEY,"ticketId" TEXT NOT NULL REFERENCES "SupportTicket"(id) ON DELETE CASCADE,"authorId" TEXT NOT NULL REFERENCES "User"(id),body TEXT NOT NULL,internal BOOLEAN NOT NULL DEFAULT false,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX "TicketMessage_ticketId_createdAt_idx" ON "TicketMessage"("ticketId","createdAt");
+CREATE TABLE "TicketAttachment" (id TEXT NOT NULL PRIMARY KEY,"messageId" TEXT NOT NULL UNIQUE REFERENCES "TicketMessage"(id) ON DELETE CASCADE,filename TEXT NOT NULL,"storageKey" TEXT NOT NULL UNIQUE,"mimeType" TEXT NOT NULL,size INTEGER NOT NULL);

@@ -1,0 +1,651 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+enum ServiceStatus {
+  PENDING
+  PROVISIONING
+  INSTALLING
+  ACTIVE
+  SUSPENDED
+  FAILED
+  TERMINATED
+}
+enum InvoiceStatus {
+  UNPAID
+  PAID
+  VOID
+}
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETE
+  FAILED
+}
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  name String
+  billingAddress Json @default("{}")
+  taxExempt Boolean @default(false)
+  passwordHash String
+  passwordChangedAt DateTime?
+  lastLoginAt DateTime?
+  lastLoginIp String?
+  lastLoginUserAgent String?
+  adminNotes String @default("")
+  suspendedAt DateTime?
+  emailVerifiedAt DateTime?
+  autoPayWallet Boolean @default(false)
+  notificationPreferences Json @default("{}")
+  suspensionReason String?
+  role Role @default(CUSTOMER)
+  totpSecret String?
+  totpEnabled Boolean @default(false)
+  createdAt DateTime @default(now())
+  sessions Session[]
+  services Service[]
+  orders Order[]
+  invoices Invoice[]
+  resetTokens ResetToken[]
+  verificationTokens VerificationToken[]
+  wallets Wallet[]
+  supportTickets SupportTicket[] @relation("TicketCustomer")
+  assignedTickets SupportTicket[] @relation("TicketAgent")
+  ticketMessages TicketMessage[]
+  couponRedemptions CouponRedemption[]
+  topups WalletTopup[]
+  carts Cart[]
+  apiKeys ApiKey[]
+}
+model ApiKey {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  name String
+  kind String
+  tokenHash String @unique
+  prefix String
+  scopes String[]
+  allowedIps String[] @default([])
+  credentialFingerprint String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  lastUsedIp String?
+  @@index([userId,createdAt])
+}
+model Session {
+  id String @id
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+model ResetToken {
+  id String @id
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  expiresAt DateTime
+}
+model Setting {
+  id String @id @default("installation")
+  companyName String @default("Harbor")
+  currency String @default("USD")
+  storefrontEnabled Boolean @default(true)
+  nodeMode String @default("remote")
+  graceDays Int @default(7)
+  invoicePrefix String @default("INV")
+  invoiceEmailsEnabled Boolean @default(false)
+  settingsVersion Int @default(0)
+  experience Json @default("{}")
+  access Json @default("{}")
+  automation Json @default("{}")
+  supportPolicy Json @default("{}")
+  notifications Json @default("{}")
+  mailConfig String?
+  logoUrl String?
+  accentColor String @default("#0d9488")
+  themes Json @default("{}")
+  companyBilling Json @default("{}")
+  walletSettings Json @default("{}")
+  regionalPricingEnabled Boolean @default(false)
+  taxEnabled Boolean @default(false)
+  taxInclusive Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+model VerificationToken {
+  id String @id
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  email String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+model MailLog {
+  id String @id @default(uuid())
+  recipient String
+  subject String
+  kind String @default("transactional")
+  status String
+  messageId String?
+  errorCode String?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+model NotificationTemplate {
+  key String @id
+  subject String
+  body String
+  updatedAt DateTime @updatedAt
+}
+model HttpLog {
+  id String @id
+  method String
+  path String
+  status Int
+  durationMs Int
+  actorId String?
+  apiKeyId String?
+  @@index([apiKeyId,createdAt])
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([status,createdAt])
+}
+model SystemRun {
+  id String @id @default(uuid())
+  task String
+  origin String
+  status String @default("RUNNING")
+  leaseUntil DateTime?
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  errorCode String?
+  @@index([task,startedAt])
+}
+model Location {
+  id String @id @default(uuid())
+  name String
+  city String
+  country String
+  description String @default("")
+  connections Connection[]
+}
+model Connection {
+  id String @id @default(uuid())
+  name String
+  provider String
+  url String
+  config Json @default("{}")
+  locationId String?
+  location Location? @relation(fields:[locationId],references:[id],onDelete:Restrict)
+  secret String
+  health String @default("UNCONFIGURED")
+  lastCheckedAt DateTime?
+  createdAt DateTime @default(now())
+  products Product[]
+  resources Resource[]
+  installations NodeInstallation[]
+  @@index([provider])
+}
+model NodeInstallation {
+  id String @id @default(uuid())
+  connectionId String
+  connection Connection @relation(fields:[connectionId],references:[id],onDelete:Cascade)
+  tokenHash String @unique
+  machineHash String?
+  fingerprint String
+  options Json
+  status String @default("WAITING")
+  step String @default("waiting")
+  createdBy String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  claimedAt DateTime?
+  lastSeenAt DateTime?
+  completedAt DateTime?
+  @@index([connectionId,createdAt])
+}
+model TaxRate {
+  id String @id @default(uuid())
+  name String
+  country String @unique
+  basisPoints Int
+  active Boolean @default(true)
+}
+model CatalogCategory {
+  id String @id @default(uuid())
+  name String
+  slug String @unique
+  description String @default("")
+  active Boolean @default(true)
+  position Int @default(0)
+  parentId String?
+  parent CatalogCategory? @relation("CatalogTree", fields:[parentId], references:[id], onDelete:Restrict)
+  children CatalogCategory[] @relation("CatalogTree")
+  products Product[]
+  @@index([parentId])
+}
+model GameEgg {
+  id String @id @default(uuid())
+  name String
+  nest String @default("Imported")
+  definition Json
+  digest String
+  archived Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Product {
+  gameConfig Json @default("{}")
+  id String @id @default(uuid())
+  name String
+  description String
+  category String
+  catalogCategoryId String?
+  catalogCategory CatalogCategory? @relation(fields:[catalogCategoryId], references:[id], onDelete:Restrict)
+  taxable Boolean @default(true)
+  stock Int?
+  perCustomerLimit Int?
+  provider String
+  price Int
+  cycle String @default("monthly")
+  setupFee Int @default(0)
+  configuration Json @default("{\"plans\":[],\"options\":[]}")
+  configurationVersion Int @default(0)
+  active Boolean @default(false)
+  listed Boolean @default(false)
+  connectionId String?
+  connection Connection? @relation(fields:[connectionId],references:[id])
+  spec Json
+  createdAt DateTime @default(now())
+  orders Order[]
+  services Service[]
+  regionalPrices RegionalPrice[]
+  coupons CouponProduct[]
+}
+model Order {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  productId String
+  product Product @relation(fields:[productId],references:[id])
+  idempotencyKey String
+  createdAt DateTime @default(now())
+  service Service?
+  couponRedemption CouponRedemption?
+  @@unique([userId,idempotencyKey])
+}
+model Service {
+  id String @id @default(uuid())
+  name String
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  productId String
+  product Product @relation(fields:[productId],references:[id])
+  orderId String @unique
+  order Order @relation(fields:[orderId],references:[id])
+  provider String
+  status ServiceStatus @default(PENDING)
+  externalId String?
+  domain String?
+  spec Json
+  metadata Json @default("{}")
+  error String?
+  nextDueAt DateTime?
+  cancelAt DateTime?
+  recurringAmount Int?
+  recurringCurrency String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  invoices Invoice[]
+  operations Operation[]
+  resource Resource?
+  supportTickets SupportTicket[]
+  cancellations ServiceCancellation[]
+  invoiceLinks InvoiceService[]
+  @@index([userId,status])
+}
+model ServiceCancellation {
+  id String @id @default(uuid())
+  serviceId String
+  service Service @relation(fields:[serviceId], references:[id])
+  requestedById String
+  mode String
+  reason String
+  status String @default("PENDING")
+  effectiveAt DateTime?
+  reviewedById String?
+  reviewNote String @default("")
+  reviewedAt DateTime?
+  completedAt DateTime?
+  operationId String? @unique
+  operation Operation? @relation(fields:[operationId], references:[id])
+  voidedInvoices Invoice[]
+  createdAt DateTime @default(now())
+  @@index([status,effectiveAt])
+  @@index([serviceId,createdAt])
+}
+model Resource {
+  id String @id @default(uuid())
+  connectionId String
+  connection Connection @relation(fields:[connectionId],references:[id])
+  kind String
+  value String
+  config Json @default("{}")
+  serviceId String? @unique
+  service Service? @relation(fields:[serviceId],references:[id])
+  @@unique([connectionId,kind,value])
+}
+model Invoice {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  serviceId String?
+  service Service? @relation(fields:[serviceId],references:[id])
+  kind String @default("HOSTING")
+  description String @default("")
+  number String? @unique
+  requestKey String? @unique
+  requestFingerprint String?
+  paidAmount Int @default(0)
+  walletCreditedAt DateTime?
+  voidReason String?
+  lineItems InvoiceItem[]
+  amount Int
+  currency String
+  billingSnapshot Json @default("{}")
+  cancellationId String?
+  cancellation ServiceCancellation? @relation(fields:[cancellationId], references:[id])
+  status InvoiceStatus @default(UNPAID)
+  dueAt DateTime
+  periodStart DateTime
+  paidAt DateTime?
+  createdAt DateTime @default(now())
+  payments Payment[]
+  deliveries InvoiceDelivery[]
+  linkedServices InvoiceService[]
+  cart Cart?
+  @@unique([serviceId,periodStart])
+  @@index([status,dueAt])
+}
+model InvoiceSequence {
+  id String @id @default("installation")
+  lastNumber Int @default(0)
+}
+model Cart {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  status String @default("OPEN")
+  items Json @default("[]")
+  version Int @default(0)
+  requestKey String?
+  requestFingerprint String?
+  invoiceId String? @unique
+  invoice Invoice? @relation(fields:[invoiceId],references:[id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId,requestKey])
+  @@index([userId,status])
+}
+model InvoiceService {
+  invoiceId String
+  invoice Invoice @relation(fields:[invoiceId],references:[id])
+  serviceId String
+  service Service @relation(fields:[serviceId],references:[id])
+  amount Int
+  @@id([invoiceId,serviceId])
+  @@index([serviceId])
+}
+model InvoiceDelivery {
+  id String @id @default(uuid())
+  invoiceId String
+  invoice Invoice @relation(fields:[invoiceId], references:[id], onDelete:Cascade)
+  requestKey String @unique
+  kind String
+  recipient String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  leaseToken String?
+  leaseUntil DateTime?
+  nextAttemptAt DateTime @default(now())
+  lastError String?
+  messageId String?
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,nextAttemptAt])
+  @@index([invoiceId,createdAt])
+}
+model InvoiceItem {
+  id String @id @default(uuid())
+  invoiceId String
+  invoice Invoice @relation(fields:[invoiceId], references:[id])
+  description String
+  kind String @default("CUSTOM")
+  quantity Int
+  unitAmount Int
+  total Int
+  taxable Boolean @default(true)
+  @@index([invoiceId])
+}
+model Payment {
+  id String @id @default(uuid())
+  invoiceId String
+  invoice Invoice @relation(fields:[invoiceId],references:[id])
+  gateway String
+  externalId String
+  appliedAmount Int @default(0)
+  amount Int
+  currency String
+  reviewRequired Boolean @default(false)
+  reviewReason String?
+  reviewedAt DateTime?
+  reviewedById String?
+  reviewResolution String?
+  createdAt DateTime @default(now())
+  @@unique([gateway,externalId])
+}
+model PaymentEvent {
+  id String @id @default(uuid())
+  gateway String
+  externalId String
+  createdAt DateTime @default(now())
+  @@unique([gateway,externalId])
+}
+model Checkout {
+  id String @id @default(uuid())
+  invoiceId String
+  amount Int?
+  currency String?
+  gateway String
+  externalId String @unique
+  url String
+  createdAt DateTime @default(now())
+  @@index([invoiceId,gateway,createdAt])
+}
+model Operation {
+  id String @id @default(uuid())
+  serviceId String
+  service Service @relation(fields:[serviceId],references:[id])
+  action String
+  input Json @default("{}")
+  idempotencyKey String @unique
+  status JobStatus @default(PENDING)
+  attempts Int @default(0)
+  leaseUntil DateTime?
+  result Json?
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cancellation ServiceCancellation?
+  @@index([status,createdAt])
+}
+model Extension {
+  id String @id
+  manifest Json
+  builtin Boolean @default(false)
+  enabled Boolean @default(false)
+  directory String?
+  config String?
+  lastError String?
+  createdAt DateTime @default(now())
+}
+model AuditLog {
+  id String @id @default(uuid())
+  actorId String?
+  action String
+  targetId String?
+  details Json @default("{}")
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([actorId,action,createdAt])
+}
+model Wallet {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  currency String
+  balance Int @default(0)
+  entries WalletEntry[]
+  @@unique([userId,currency])
+}
+model WalletEntry {
+  id String @id @default(uuid())
+  walletId String
+  wallet Wallet @relation(fields:[walletId],references:[id])
+  amount Int
+  balanceAfter Int
+  kind String
+  reference String @unique
+  description String
+  createdAt DateTime @default(now())
+  @@index([walletId,createdAt])
+}
+model WalletTopup {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  amount Int
+  currency String
+  reference String
+  status String @default("PENDING")
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([userId,reference])
+}
+model PricingRegion {
+  id String @id @default(uuid())
+  name String
+  country String @unique
+  currency String
+  active Boolean @default(true)
+  prices RegionalPrice[]
+}
+model RegionalPrice {
+  id String @id @default(uuid())
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  regionId String
+  region PricingRegion @relation(fields:[regionId],references:[id],onDelete:Cascade)
+  setupFee Int @default(0)
+  amount Int
+  @@unique([productId,regionId])
+}
+model SupportDepartment {
+  id String @id @default(uuid())
+  name String
+  active Boolean @default(true)
+  notificationEmail String @default("")
+  tickets SupportTicket[]
+}
+model SupportTicket {
+  id String @id @default(uuid())
+  customerId String
+  customer User @relation("TicketCustomer",fields:[customerId],references:[id])
+  assignedToId String?
+  assignedTo User? @relation("TicketAgent",fields:[assignedToId],references:[id])
+  departmentId String?
+  department SupportDepartment? @relation(fields:[departmentId],references:[id])
+  serviceId String?
+  service Service? @relation(fields:[serviceId],references:[id])
+  subject String
+  priority String @default("NORMAL")
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  closedAt DateTime?
+  messages TicketMessage[]
+  @@index([customerId,updatedAt])
+  @@index([status,updatedAt])
+}
+model TicketMessage {
+  id String @id @default(uuid())
+  ticketId String
+  ticket SupportTicket @relation(fields:[ticketId],references:[id],onDelete:Cascade)
+  authorId String
+  author User @relation(fields:[authorId],references:[id])
+  body String
+  internal Boolean @default(false)
+  createdAt DateTime @default(now())
+  attachment TicketAttachment?
+  @@index([ticketId,createdAt])
+}
+model TicketAttachment {
+  id String @id @default(uuid())
+  messageId String @unique
+  message TicketMessage @relation(fields:[messageId],references:[id],onDelete:Cascade)
+  filename String
+  storageKey String @unique
+  mimeType String
+  size Int
+}
+model Coupon {
+  id String @id @default(uuid())
+  code String @unique
+  description String @default("")
+  active Boolean @default(true)
+  type String
+  value Int
+  currency String?
+  recurring Boolean @default(false)
+  firstPurchaseOnly Boolean @default(false)
+  startsAt DateTime?
+  endsAt DateTime?
+  maxUses Int?
+  perCustomerLimit Int @default(1)
+  countries Json @default("[]")
+  products CouponProduct[]
+  redemptions CouponRedemption[]
+}
+model CouponProduct {
+  couponId String
+  coupon Coupon @relation(fields:[couponId],references:[id],onDelete:Cascade)
+  productId String
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  @@id([couponId,productId])
+}
+model CouponRedemption {
+  id String @id @default(uuid())
+  couponId String
+  coupon Coupon @relation(fields:[couponId],references:[id])
+  userId String
+  user User @relation(fields:[userId],references:[id])
+  orderId String @unique
+  order Order @relation(fields:[orderId],references:[id])
+  state String @default("RESERVED")
+  createdAt DateTime @default(now())
+  @@index([couponId,state,userId])
+}

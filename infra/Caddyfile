@@ -1,0 +1,16 @@
+{
+  email {$ACME_EMAIL}
+}
+{$DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 105MB
+  }
+  handle /api/* {
+    reverse_proxy 127.0.0.1:4000
+  }
+  handle {
+    reverse_proxy 127.0.0.1:3000
+  }
+}
+import /etc/caddy/conf.d/*.caddy

@@ -1,0 +1,1 @@
+ALTER TABLE "Setting" ADD COLUMN "walletSettings" JSONB NOT NULL DEFAULT '{}';

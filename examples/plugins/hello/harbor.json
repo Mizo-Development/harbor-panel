@@ -1,0 +1,1 @@
+{"id":"hello-world","name":"Hello Harbor","version":"1.0.0","sdkVersion":"^1.0.0","type":"plugin","description":"A complete example with an event handler, authenticated API route, and customer page.","permissions":["events:subscribe","pages:register"],"entry":"dist/index.js","frontendEntry":"ui/index.tsx","dependencies":{}}

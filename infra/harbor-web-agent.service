@@ -1,0 +1,18 @@
+[Unit]
+Description=Harbor native web hosting agent
+After=network-online.target nginx.service mariadb.service php8.3-fpm.service
+Wants=network-online.target
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/harbor
+EnvironmentFile=/etc/harbor-web-agent.env
+ExecStart=/usr/bin/node /opt/harbor/apps/agent/dist/main.js
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc /srv/harbor /var/lib/harbor-web /etc/nginx/conf.d /etc/php/8.3/fpm/pool.d /var/log/nginx /etc/letsencrypt /var/log/letsencrypt /var/lib/letsencrypt /run/php
+[Install]
+WantedBy=multi-user.target

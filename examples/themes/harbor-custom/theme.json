@@ -1,0 +1,1 @@
+{"tokens":{"light":{"--primary":"#6d28d9","--ring":"#8b5cf6","--radius":"0.875rem"},"dark":{"--primary":"#a78bfa","--primary-foreground":"#171025","--ring":"#a78bfa","--radius":"0.875rem"}},"areas":{"admin":{"name":"Midnight administration"},"customer":{"name":"Midnight dashboard"},"storefront":{"name":"Midnight storefront"}}}

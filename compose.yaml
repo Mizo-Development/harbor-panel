@@ -1,0 +1,150 @@
+name: harbor
+x-app: &app
+  image: harbor:local
+  build: .
+  restart: unless-stopped
+  environment: &environment
+    NODE_ENV: production
+    DATABASE_URL: postgresql://harbor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/harbor
+    REDIS_URL: redis://redis:6379
+    ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}
+    SETUP_TOKEN: ${SETUP_TOKEN:?Set SETUP_TOKEN}
+    APP_URL: ${APP_URL:?Set APP_URL}
+    API_URL: http://api:4000
+    API_HOST: 0.0.0.0
+    API_PORT: '4000'
+    TRUST_PROXY: '1'
+    EXTENSIONS_DIR: /data/extensions
+    FRONTEND_RELEASES_DIR: /data/frontend
+    ATTACHMENTS_DIR: /data/tickets
+    BRANDING_DIR: /data/branding
+    SMTP_URL: ${SMTP_URL:-}
+    SMTP_FROM: ${SMTP_FROM:-Harbor <hosting@example.com>}
+  volumes:
+    - extensions:/data/extensions
+    - frontend:/data/frontend
+    - tickets:/data/tickets
+    - branding:/data/branding
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: harbor
+      POSTGRES_DB: harbor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U harbor -d harbor']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    image: harbor:local
+    build: .
+    user: root
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://harbor:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/harbor
+    volumes:
+      - extensions:/data/extensions
+      - frontend:/data/frontend
+      - tickets:/data/tickets
+      - branding:/data/branding
+    command:
+      [
+        'sh',
+        '-c',
+        'mkdir -p /data/extensions /data/frontend /data/tickets /data/branding && chown node:node /data/extensions /data/frontend /data/tickets /data/branding && node node_modules/prisma/build/index.js migrate deploy',
+      ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  api:
+    <<: *app
+    ports:
+      - '127.0.0.1:4000:4000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:4000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    <<: *app
+    command: ['node', 'apps/api/dist/worker.js']
+  web:
+    <<: *app
+    command: ['node', 'scripts/start-web.mjs']
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      <<: *environment
+      HOSTNAME: 0.0.0.0
+      PORT: '3000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  frontend-builder:
+    <<: *app
+    profiles: ['tools']
+    restart: 'no'
+    command: ['node', 'scripts/build-frontend.mjs']
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL}
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy.d:/etc/caddy/conf.d:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+volumes:
+  branding:
+  tickets:
+  postgres:
+  redis:
+  extensions:
+  frontend:
+  caddy_data:
+  caddy_config:

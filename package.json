@@ -1,0 +1,49 @@
+{
+  "name": "harbor-hosting",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web 'npm run dev -w @harbor/api' 'npm run dev -w @harbor/web'",
+    "build": "npm run build -w @harbor/sdk && npm run build -w @harbor/api && npm run build -w @harbor/agent && npm run build -w @harbor/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "tsx --test tests/*.test.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "node --env-file=.env node_modules/prisma/build/index.js migrate deploy",
+    "worker": "npm run worker -w @harbor/api",
+    "extensions:generate": "tsx --env-file=.env scripts/generate-extensions.ts",
+    "extensions:build": "npm run extensions:generate && npm run build -w @harbor/web",
+    "test:e2e": "playwright test",
+    "dev:setup": "node scripts/dev-setup.mjs && npm run build -w @harbor/sdk",
+    "predev": "npm run build -w @harbor/sdk",
+    "client:generate": "tsx --env-file=.env scripts/generate-client.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.2.3",
+    "@types/smtp-server": "^3.5.13",
+    "concurrently": "^9.2.1",
+    "openapi-typescript": "^7.10.1",
+    "pdfjs-dist": "^6.5.438",
+    "prettier": "^3.6.2",
+    "prisma": "7.10.1",
+    "smtp-server": "^3.21.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "overrides": {
+    "@types/react": "19.3.0",
+    "@redocly/openapi-core": {
+      "minimatch": "^11.0.4"
+    }
+  },
+  "type": "module"
+}

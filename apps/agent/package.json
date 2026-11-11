@@ -1,0 +1,21 @@
+{
+  "name": "@harbor/agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/main.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@harbor/sdk": "*",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "zod": "^4.6.7",
+    "tar": "^7.5.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5"
+  }
+}

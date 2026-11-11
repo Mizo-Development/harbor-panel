@@ -1,0 +1,7 @@
+CREATE TABLE "GameEgg" (
+  "id" TEXT NOT NULL, "name" TEXT NOT NULL, "nest" TEXT NOT NULL DEFAULT 'Imported',
+  "definition" JSONB NOT NULL, "digest" TEXT NOT NULL, "archived" BOOLEAN NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "GameEgg_pkey" PRIMARY KEY ("id")
+);
+ALTER TABLE "Product" ADD COLUMN "gameConfig" JSONB NOT NULL DEFAULT '{}';

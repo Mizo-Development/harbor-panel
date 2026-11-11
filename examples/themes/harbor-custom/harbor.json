@@ -1,0 +1,1 @@
+{"id":"harbor-midnight","name":"Midnight","version":"1.0.0","sdkVersion":"^1.0.0","type":"theme","description":"A violet-accent theme with a custom layout wrapper for all three areas.","permissions":["pages:register"],"areas":["admin","customer","storefront"],"frontendEntry":"ui/index.tsx","dependencies":{}}
